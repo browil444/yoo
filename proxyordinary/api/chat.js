@@ -1,15 +1,11 @@
 export default async function handler(req, res) {
+    // CORS
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
     
-    if (req.method === 'OPTIONS') {
-        return res.status(200).end();
-    }
-    
-    if (req.method !== 'POST') {
-        return res.status(405).json({ error: 'Method not allowed' });
-    }
+    if (req.method === 'OPTIONS') return res.status(200).end();
+    if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
     
     const { model, messages, systemPrompt } = req.body;
     
@@ -38,10 +34,7 @@ async function fetchNoteGPT(messages) {
     const historyPairs = [];
     for (let i = 0; i < messages.length - 1; i += 2) {
         if (messages[i]?.role === 'user' && messages[i+1]?.role === 'assistant') {
-            historyPairs.push({
-                user: messages[i].content,
-                assistant: messages[i+1].content
-            });
+            historyPairs.push({ user: messages[i].content, assistant: messages[i+1].content });
         }
     }
     
@@ -84,7 +77,7 @@ async function fetchOverChat(messages, systemPrompt) {
     const systemMsg = {
         id: generateUUID(),
         role: "system",
-        content: systemPrompt || "Ikuti bahasa user dan jawab dengan gaya natural, singkat, dan jelas."
+        content: systemPrompt || "Ikuti bahasa user dan jawab dengan gaya natural."
     };
     
     const userMsg = {
@@ -125,8 +118,7 @@ async function fetchOverChat(messages, systemPrompt) {
     
     const reader = response.body.getReader();
     const decoder = new TextDecoder();
-    let buffer = "";
-    let answer = "";
+    let buffer = "", answer = "";
     
     while (true) {
         const { value, done } = await reader.read();
@@ -148,7 +140,7 @@ async function fetchOverChat(messages, systemPrompt) {
         }
     }
     
-    return answer || "OverChat sedang sibuk, coba lagi nanti.";
+    return answer || "OverChat sedang sibuk.";
 }
 
 async function fetchUnlimitedAI(messages, systemPrompt) {
@@ -158,25 +150,12 @@ async function fetchUnlimitedAI(messages, systemPrompt) {
     
     const indonesianPrompt = `Kamu wajib menjawab hanya dalam bahasa Indonesia. ${systemPrompt || ''}\n\nPertanyaan: ${lastMessage.content}`;
     
-    const userMsgObj = {
-        id: generateUUID(),
-        role: "user",
-        content: indonesianPrompt,
-        parts: [{ type: "text", text: indonesianPrompt }],
-        createdAt: new Date().toISOString()
-    };
-    
-    const assistantPlaceholder = {
-        id: generateUUID(),
-        role: "assistant",
-        content: "",
-        parts: [{ type: "text", text: "" }],
-        createdAt: new Date().toISOString()
-    };
-    
     const body = {
         chatId: chatId,
-        messages: [userMsgObj, assistantPlaceholder],
+        messages: [
+            { id: generateUUID(), role: "user", content: indonesianPrompt, parts: [{ type: "text", text: indonesianPrompt }], createdAt: new Date().toISOString() },
+            { id: generateUUID(), role: "assistant", content: "", parts: [{ type: "text", text: "" }], createdAt: new Date().toISOString() }
+        ],
         selectedChatModel: "chat-model-reasoning",
         selectedCharacter: null,
         selectedStory: null,
@@ -198,8 +177,7 @@ async function fetchUnlimitedAI(messages, systemPrompt) {
     
     const reader = response.body.getReader();
     const decoder = new TextDecoder();
-    let buffer = "";
-    let answer = "";
+    let buffer = "", answer = "";
     
     while (true) {
         const { value, done } = await reader.read();
@@ -219,7 +197,7 @@ async function fetchUnlimitedAI(messages, systemPrompt) {
         }
     }
     
-    return answer || "UnlimitedAI sedang sibuk, coba lagi nanti.";
+    return answer || "UnlimitedAI sedang sibuk.";
 }
 
 function generateUUID() {
@@ -262,5 +240,5 @@ function parseSSE(rawBody) {
             if (json.done) break;
         } catch {}
     }
-    return result || "Maaf, API sedang sibuk. Coba lagi nanti.";
+    return result || "Maaf, API sedang sibuk.";
 }
